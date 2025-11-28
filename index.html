@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clifford playground</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        button {
+            font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            color: #333;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .controls label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .controls input, .controls button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        
+        .controls input {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .controls button {
+            margin-left: 10px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .controls button:hover {
+            background-color: #c0392b;
+        }
+        
+        .controls button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        #measurement-result {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 150px;
+            height: 28px;
+            margin-left: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 0 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            vertical-align: middle;
+            color: transparent;
+        }
+        
+        #measurement-result.show {
+            animation: textAppear 0.4s ease forwards;
+        }
+        
+        @keyframes textAppear {
+            0% {
+                color: transparent;
+                filter: blur(1px);
+            }
+            100% {
+                color: #333;
+                filter: blur(0);
+            }
+        }
+        
+        #undo-button {
+            background-color: #e74c3c;
+        }
+        
+        #undo-button:hover:not(:disabled) {
+            background-color: #7f8c8d;
+        }
+        
+        .matrix-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .gate-buttons-left {
+            display: flex;
+            flex-direction: column;
+            margin-right: 10px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 2px;
+            height: 30px;
+            align-items: center;
+            margin-bottom: 1px;
+        }
+        
+        .gate-button {
+            padding: 3px 8px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            min-width: 35px;
+            height: 26px;
+        }
+        
+        .gate-button.h-gate {
+            background-color: #3498db; /* Blue for Hadamard */
+        }
+        
+        .gate-button.h-gate:hover {
+            background-color: #2980b9;
+        }
+        
+        .gate-button.s-gate {
+            background-color: #9b59b6; /* Purple for Phase */
+        }
+        
+        .gate-button.s-gate:hover {
+            background-color: #8e44ad;
+        }
+        
+        .gate-button.cnot-gate {
+            background-color: #e67e22; /* Orange for CNOT */
+        }
+        
+        .gate-button.cnot-gate:hover {
+            background-color: #d35400;
+        }
+        
+        .gate-button.selected {
+            background-color: #96fa31;
+            border: #f1c40f;
+        }
+        
+        .matrix-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1px;
+            background-color: #ddd;
+            border: 2px solid #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            transition: background-color 0.2s ease;
+            position: relative;
+        }
+        
+        .cell.changed {
+            animation: cellChange 0.4s ease;
+        }
+        
+        @keyframes cellChange {
+            0%, 100% {
+                box-shadow: none;
+            }
+            50% {
+                box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.4);
+            }
+        }
+        
+        /* Quadrant colors for symplectic matrix - base (0) state */
+        .cell.xx {
+            background-color: #e8f4f8; /* Light blue for X-X quadrant */
+        }
+        
+        .cell.xz {
+            background-color: #fef5e7; /* Light yellow for X-Z quadrant */
+        }
+        
+        .cell.zx {
+            background-color: #f4ecf7; /* Light purple for Z-X quadrant */
+        }
+        
+        .cell.zz {
+            background-color: #e8f8f5; /* Light green for Z-Z quadrant */
+        }
+        
+        /* Set (1) state - darker versions of quadrant colors */
+        .cell.xx.set {
+            background-color: #3498db; /* Dark blue for X-X quadrant */
+        }
+        
+        .cell.xz.set {
+            background-color: #f39c12; /* Dark yellow/orange for X-Z quadrant */
+        }
+        
+        .cell.zx.set {
+            background-color: #9b59b6; /* Dark purple for Z-X quadrant */
+        }
+        
+        .cell.zz.set {
+            background-color: #1abc9c; /* Dark teal/green for Z-Z quadrant */
+        }
+        
+        /* Parity column colors */
+        .cell.parity-x {
+            background-color: #fadbd8; /* Light red for X parity (top half) */
+        }
+        
+        .cell.parity-x.set {
+            background-color: #e74c3c; /* Dark red for X parity set */
+        }
+        
+        .cell.parity-z {
+            background-color: #d5f4e6; /* Light mint for Z parity (bottom half) */
+        }
+        
+        .cell.parity-z.set {
+            background-color: #27ae60; /* Dark green for Z parity set */
+        }
+        
+        .circuit-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .circuit-container h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        #circuit-svg {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .stabilizers-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .stabilizers-container h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .stabilizer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            color: #333;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .matrix-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .gate-buttons-left {
+                flex-direction: row;
+                flex-wrap: wrap;
+                margin-right: 0;
+                margin-top: 10px;
+                justify-content: center;
+                gap: 5px;
+            }
+            
+            .button-row {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clifford playground</h1>
+        
+        <div class="controls">
+            <label for="qubit-input">Number of qubits:</label>
+            <input type="number" id="qubit-input" min="1" max="20" value="4" style="width: 60px;"><br /><br />
+            <button id="undo-button">Undo</button>
+            <button id="reset-button">Reset</button>
+            <button id="measure-button">Measure all</button>
+            <span id="measurement-result"></span>
+        </div>
+        
+        <div class="matrix-container">
+            <div class="gate-buttons-left" id="gate-buttons-left"></div>
+            <div class="grid" id="grid"></div>
+        </div>
+        
+        <div class="circuit-container">
+            <h2>Quantum circuit</h2>
+            <svg id="circuit-svg"></svg>
+        </div>
+        
+        <div class="stabilizers-container">
+            <h2>Stabilizers</h2>
+            <div class="stabilizer-list" id="stabilizer-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let numQubits = 4;
+        let matrixSize = 0;
+        let x = []; // X part of symplectic matrix (2n x n)
+        let z = []; // Z part of symplectic matrix (2n x n)
+        let parityColumn = []; // Parity column (2n x 1)
+        let circuitGates = [];
+        let selectedControlQubit = null;
+        let initialStates = []; // Array of 0s and 1s for initial qubit states
+        let history = []; // Stack of previous states for undo
+        let storedX = null; // Store original x before measurement
+        let storedZ = null; // Store original z before measurement
+        let storedParity = null; // Store original parity before measurement
+        let measurementResults = []; // Array of measurement outcomes per qubit
+        let hasMeasurement = false; // Whether measurement has been performed
+        let previousX = null; // Previous x state for animation
+        let previousZ = null; // Previous z state for animation
+        let previousParity = null; // Previous parity for animation
+
+        // Initialize the application
+        function init() {
+            const inputValue = parseInt(document.getElementById('qubit-input').value);
+            if (isNaN(inputValue) || inputValue < 1 || inputValue > 2000) {
+                alert('Please enter a number between 1 and 2000');
+                document.getElementById('qubit-input').value = numQubits;
+                return;
+            }
+            numQubits = inputValue;
+            matrixSize = 2 * numQubits;
+            initializeMatrix();
+            renderGrid();
+            renderGateButtons();
+            renderCircuit();
+        }
+
+        // Initialize symplectic matrix to identity
+        function initializeMatrix() {
+            x = [];
+            z = [];
+            for (let i = 0; i < matrixSize; i++) {
+                x[i] = [];
+                z[i] = [];
+                for (let j = 0; j < numQubits; j++) {
+                    // Identity: X part has 1s in first n rows on diagonal
+                    x[i][j] = (i === j) ? 1 : 0;
+                    // Z part has 1s in last n rows on diagonal
+                    z[i][j] = (i === j + numQubits) ? 1 : 0;
+                }
+            }
+            parityColumn = new Array(matrixSize).fill(0);
+            circuitGates = [];
+            selectedControlQubit = null;
+            initialStates = new Array(numQubits).fill(0);
+            history = [];
+            measurementResults = [];
+            hasMeasurement = false;
+            // Reset animation tracking state
+            previousX = null;
+            previousZ = null;
+            previousParity = null;
+            document.getElementById('measurement-result').textContent = '';
+            document.getElementById('measurement-result').classList.remove('show');
+            updateUndoButton();
+        }
+
+        // Save current state to history before applying a gate
+        function saveState() {
+            const state = {
+                x: x.map(row => [...row]),
+                z: z.map(row => [...row]),
+                parity: [...parityColumn],
+                gates: [...circuitGates]
+            };
+            history.push(state);
+            updateUndoButton();
+        }
+
+        // Undo the last gate application
+        function undo() {
+            if (history.length === 0) return;
+            
+            const previousState = history.pop();
+            x = previousState.x;
+            z = previousState.z;
+            parityColumn = previousState.parity;
+            circuitGates = previousState.gates;
+            
+            measurementResults = [];
+            hasMeasurement = false;
+            document.getElementById('measurement-result').textContent = '';
+            
+            renderGrid();
+            renderCircuit();
+            updateUndoButton();
+        }
+
+        // Update undo button state
+        function updateUndoButton() {
+            const undoButton = document.getElementById('undo-button');
+            if (undoButton) {
+                undoButton.disabled = history.length === 0;
+            }
+        }
+
+        // Render the symplectic matrix grid
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${matrixSize + 1}, 30px)`;
+            grid.style.gridTemplateRows = `repeat(${matrixSize}, 30px)`;
+
+            for (let i = 0; i < matrixSize; i++) {
+                for (let j = 0; j < matrixSize; j++) {
+                    const cell = document.createElement('div');
+                    const quadrant = getQuadrantClass(i, j);
+                    // Determine value: x part in left half, z part in right half
+                    const isSet = (j < numQubits) ? x[i][j] === 1 : z[i][j - numQubits] === 1;
+                    
+                    // Check if cell changed
+                    let hasChanged = false;
+                    if (previousX && previousZ) {
+                        const prevValue = (j < numQubits) ? previousX[i][j] : previousZ[i][j - numQubits];
+                        hasChanged = (prevValue !== (isSet ? 1 : 0));
+                    }
+                    
+                    cell.className = `cell ${quadrant}${isSet ? ' set' : ''}${hasChanged ? ' changed' : ''}`;
+                    grid.appendChild(cell);
+                }
+                // Add parity column cell
+                const parityCell = document.createElement('div');
+                const parityClass = i < numQubits ? 'parity-x' : 'parity-z';
+                const isParitySet = parityColumn[i] === 1;
+                
+                // Check if parity changed
+                let parityChanged = false;
+                if (previousParity) {
+                    parityChanged = previousParity[i] !== parityColumn[i];
+                }
+                
+                parityCell.className = `cell ${parityClass}${isParitySet ? ' set' : ''}${parityChanged ? ' changed' : ''}`;
+                grid.appendChild(parityCell);
+            }
+            
+            // Store current state for next comparison
+            previousX = x.map(row => [...row]);
+            previousZ = z.map(row => [...row]);
+            previousParity = [...parityColumn];
+        }
+
+        // Determine which quadrant a cell belongs to
+        function getQuadrantClass(row, col) {
+            const n = numQubits;
+            if (row < n && col < n) return 'xx';  // Top-left: X-X
+            if (row < n && col >= n) return 'xz'; // Top-right: X-Z
+            if (row >= n && col < n) return 'zx'; // Bottom-left: Z-X
+            return 'zz';                           // Bottom-right: Z-Z
+        }
+
+        // Render gate buttons (H, S, and CNOT buttons aligned with rows)
+        function renderGateButtons() {
+            const leftButtons = document.getElementById('gate-buttons-left');
+            leftButtons.innerHTML = '';
+
+            // Create button rows aligned with each qubit row
+            for (let i = 0; i < numQubits; i++) {
+                const buttonRow = document.createElement('div');
+                buttonRow.className = 'button-row';
+
+                const hButton = document.createElement('button');
+                hButton.className = 'gate-button h-gate';
+                hButton.textContent = `H ${i}`;
+                hButton.onclick = () => applyHadamard(i);
+                buttonRow.appendChild(hButton);
+
+                const sButton = document.createElement('button');
+                sButton.className = 'gate-button s-gate';
+                sButton.textContent = `S ${i}`;
+                sButton.onclick = () => applyPhase(i);
+                buttonRow.appendChild(sButton);
+
+                const cnotButton = document.createElement('button');
+                cnotButton.className = 'gate-button cnot-gate';
+                cnotButton.textContent = `CNOT ${i}`;
+                cnotButton.id = `cnot-${i}`;
+                cnotButton.onclick = () => handleCNOTSelection(i);
+                buttonRow.appendChild(cnotButton);
+
+                leftButtons.appendChild(buttonRow);
+            }
+        }
+
+        // Handle CNOT gate selection (control then target)
+        function handleCNOTSelection(qubit) {
+            if (selectedControlQubit === null) {
+                // First click: select control qubit
+                selectedControlQubit = qubit;
+                document.getElementById(`cnot-${qubit}`).classList.add('selected');
+            } else if (selectedControlQubit === qubit) {
+                // Click same qubit: deselect
+                selectedControlQubit = null;
+                document.getElementById(`cnot-${qubit}`).classList.remove('selected');
+            } else {
+                // Second click: apply CNOT with selected control and this target
+                applyCNOT(selectedControlQubit, qubit);
+                document.getElementById(`cnot-${selectedControlQubit}`).classList.remove('selected');
+                selectedControlQubit = null;
+            }
+        }
+
+        // Apply Hadamard gate to qubit q
+        function applyHadamard(q) {
+            saveState();
+            measurementResults = [];
+            hasMeasurement = false;
+            document.getElementById('measurement-result').textContent = '';
+            
+            // H gate swaps X and Z components for qubit q
+            const n = numQubits;
+            
+            // Update parity column: r_i = r_i ⊕ x_{iq} z_{iq}
+            for (let i = 0; i < matrixSize; i++) {
+                parityColumn[i] = (parityColumn[i] + (x[i][q] * z[i][q])) % 2;
+            }
+            
+            // Swap X and Z columns for qubit q
+            for (let i = 0; i < matrixSize; i++) {
+                [x[i][q], z[i][q]] = [z[i][q], x[i][q]];
+            }
+            
+            circuitGates.push({ type: 'H', qubit: q });
+            renderGrid();
+            renderCircuit();
+        }
+
+        // Apply Phase (S) gate to qubit q
+        function applyPhase(q) {
+            saveState();
+            measurementResults = [];
+            hasMeasurement = false;
+            document.getElementById('measurement-result').textContent = '';
+            
+            // S gate: X -> Y (which is X + Z in symplectic), so add X component to Z
+            const n = numQubits;
+            
+            // Update parity column: r_i = r_i ⊕ x_{iq} z_{iq}
+            for (let i = 0; i < matrixSize; i++) {
+                parityColumn[i] = (parityColumn[i] + (x[i][q] * z[i][q])) % 2;
+            }
+            
+            // Z += X for qubit q
+            for (let i = 0; i < matrixSize; i++) {
+                z[i][q] = (z[i][q] + x[i][q]) % 2;
+            }
+            
+            circuitGates.push({ type: 'S', qubit: q });
+            renderGrid();
+            renderCircuit();
+        }
+
+        // Apply CNOT gate with control and target qubits
+        function applyCNOT(control, target) {
+            saveState();
+            measurementResults = [];
+            hasMeasurement = false;
+            document.getElementById('measurement-result').textContent = '';
+            
+            // CNOT: X_control stays same, X_target -> X_target + X_control
+            //       Z_control -> Z_control + Z_target, Z_target stays same
+            
+            // Update parity column: r_i = r_i ⊕ x_{ia} z_{ib} (x_{ib} ⊕ z_{ia} ⊕ 1)
+            for (let i = 0; i < matrixSize; i++) {
+                const update = x[i][control] * z[i][target] * ((x[i][target] + z[i][control] + 1) % 2);
+                parityColumn[i] = (parityColumn[i] + update) % 2;
+            }
+            
+            // X_target += X_control
+            for (let i = 0; i < matrixSize; i++) {
+                x[i][target] = (x[i][target] + x[i][control]) % 2;
+            }
+            
+            // Z_control += Z_target
+            for (let i = 0; i < matrixSize; i++) {
+                z[i][control] = (z[i][control] + z[i][target]) % 2;
+            }
+            
+            circuitGates.push({ type: 'CNOT', control: control, target: target });
+            renderGrid();
+            renderCircuit();
+        }
+
+        // Rowsum operation: row h = row h + row i (mod 2)
+        // This includes the parity column
+        function rowsum(h, i) {
+            const n = numQubits;
+            
+            // Calculate phase contribution (for parity)
+            let phase = 0;
+            for (let j = 0; j < n; j++) {
+                phase += x[h][j] * z[i][j] * (x[i][j] + z[h][j] + 1);
+            }
+            phase = phase % 2;
+            
+            // Update row h: add row i
+            for (let j = 0; j < n; j++) {
+                x[h][j] = (x[h][j] + x[i][j]) % 2;
+                z[h][j] = (z[h][j] + z[i][j]) % 2;
+            }
+            parityColumn[h] = (parityColumn[h] + parityColumn[i] + phase) % 2;
+        }
+
+        // Measure qubit a in standard basis (Aaronson-Gottesman algorithm)
+        function measureQubit(a) {
+            const n = numQubits;
+            
+            // Find p ∈ {n, ..., 2n-1} such that x_{p,a} = 1
+            let p = -1;
+            for (let i = n; i < matrixSize; i++) {
+                if (x[i][a] === 1) {
+                    p = i;
+                    break;
+                }
+            }
+            
+            if (p !== -1) {
+                // Case I: Random outcome
+                // First, call rowsum(i, p) for all i where i != p and x_{i,a} = 1
+                for (let i = 0; i < matrixSize; i++) {
+                    if (i !== p && x[i][a] === 1) {
+                        rowsum(i, p);
+                    }
+                }
+                
+                // Second, set row (p-n) equal to row p
+                for (let j = 0; j < n; j++) {
+                    x[p - n][j] = x[p][j];
+                    z[p - n][j] = z[p][j];
+                }
+                parityColumn[p - n] = parityColumn[p];
+                
+                // Third, set row p to 0 except r_p is random and z_{p,a} = 1
+                for (let j = 0; j < n; j++) {
+                    x[p][j] = 0;
+                    z[p][j] = 0;
+                }
+                z[p][a] = 1; // z_{p,a} = 1
+                const outcome = Math.random() < 0.5 ? 0 : 1;
+                parityColumn[p] = outcome;
+                
+                return outcome;
+            } else {
+                // Case II: Determinate outcome
+                // Create temporary row 2n+1
+                let tempX = new Array(n).fill(0);
+                let tempZ = new Array(n).fill(0);
+                let tempParity = 0;
+                
+                // Call rowsum for temporary row with rows i+n where x_{i,a} = 1
+                for (let i = 0; i < n; i++) {
+                    if (x[i][a] === 1) {
+                        // Add row (i+n) to temp row
+                        for (let j = 0; j < n; j++) {
+                            tempX[j] = (tempX[j] + x[i + n][j]) % 2;
+                            tempZ[j] = (tempZ[j] + z[i + n][j]) % 2;
+                        }
+                        tempParity = (tempParity + parityColumn[i + n]) % 2;
+                    }
+                }
+                
+                return tempParity;
+            }
+        }
+
+        // Measure all qubits
+        function measureAll() {
+            // Store original matrix and parity
+            storedX = x.map(row => [...row]);
+            storedZ = z.map(row => [...row]);
+            storedParity = [...parityColumn];
+            
+            // Measure all qubits
+            measurementResults = [];
+            for (let i = 0; i < numQubits; i++) {
+                measurementResults.push(measureQubit(i));
+            }
+            
+            hasMeasurement = true;
+            const resultString = measurementResults.join('');
+            
+            // Trigger animation by removing and re-adding the show class
+            const resultElement = document.getElementById('measurement-result');
+            resultElement.classList.remove('show');
+            resultElement.textContent = `Result: ${resultString}`;
+            
+            // Force reflow to restart animation
+            void resultElement.offsetWidth;
+            resultElement.classList.add('show');
+            
+            // Restore original matrix
+            x = storedX;
+            z = storedZ;
+            parityColumn = storedParity;
+            
+            renderGrid();
+            renderCircuit();
+        }
+
+        // Calculate stabilizers for the resulting state
+        function calculateStabilizers() {
+            const stabilizers = [];
+            const n = numQubits;
+            
+            // The bottom n rows (rows n to 2n-1) represent the stabilizers
+            // Each row represents one stabilizer
+            for (let q = 0; q < numQubits; q++) {
+                let xPart = [];
+                let zPart = [];
+                
+                // Row (n + q) contains the stabilizer
+                for (let i = 0; i < n; i++) {
+                    xPart[i] = x[n + q][i];
+                    zPart[i] = z[n + q][i];
+                }
+                
+                // Sign is determined by parity column
+                const sign = parityColumn[n + q] === 0 ? '+' : '−';
+                
+                stabilizers.push({
+                    x: xPart,
+                    z: zPart,
+                    sign: sign
+                });
+            }
+            
+            return stabilizers;
+        }
+
+        // Convert stabilizer to string representation
+        function stabilizerToString(stab) {
+            const pauliChars = ['𝐼', '𝑋', '𝑍', '𝑌'];
+            let result = stab.sign;
+            let allIdentity = true;
+            
+            for (let i = 0; i < stab.x.length; i++) {
+                const pauliIdx = stab.x[i] + 2 * stab.z[i];
+                if (pauliIdx !== 0) allIdentity = false;
+                result += pauliChars[pauliIdx];
+                if (i < stab.x.length - 1) result += '⊗';
+            }
+            
+            return allIdentity ? stab.sign + '𝐼' : result;
+        }
+
+        // Render the quantum circuit as SVG
+        function renderCircuit() {
+            const svg = document.getElementById('circuit-svg');
+            const wireSpacing = 35;
+            const gateSpacing = 50;
+            const leftMargin = 60;
+            const rightMargin = 60;
+            const topMargin = 20;
+            const bottomMargin = 20;
+            const extraSpace = 0; //hasMeasurement ? gateSpacing + 40 : 0; // Extra space for measurement + result text
+            const circuitWidth = leftMargin + Math.max(circuitGates.length, 1) * gateSpacing + extraSpace + rightMargin;
+            const circuitHeight = topMargin + (numQubits - 1) * wireSpacing + bottomMargin;
+            
+            svg.setAttribute('viewBox', `0 0 ${circuitWidth} ${circuitHeight}`);
+            svg.innerHTML = '';
+
+            const stabilizers = calculateStabilizers();
+
+            // Draw qubit wires
+            for (let i = 0; i < numQubits; i++) {
+                const y = topMargin + i * wireSpacing;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', leftMargin);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', circuitWidth - rightMargin);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', '2');
+                svg.appendChild(line);
+
+                // Initial state on left
+                const initialLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                initialLabel.setAttribute('x', leftMargin - 30);
+                initialLabel.setAttribute('y', y + 5);
+                initialLabel.setAttribute('font-size', '12');
+                initialLabel.setAttribute('fill', '#2c3e50');
+                initialLabel.textContent = `|${initialStates[i]}⟩`;
+                svg.appendChild(initialLabel);
+            }
+            
+            // Update stabilizers display
+            const stabilizerList = document.getElementById('stabilizer-list');
+            stabilizerList.innerHTML = '';
+            stabilizers.forEach((stab) => {
+                const stabDiv = document.createElement('div');
+                stabDiv.textContent = stabilizerToString(stab);
+                stabilizerList.appendChild(stabDiv);
+            });
+
+            // Draw gates
+            circuitGates.forEach((gate, idx) => {
+                const x = leftMargin + (idx + 0.5) * gateSpacing;
+
+                if (gate.type === 'H' || gate.type === 'S') {
+                    const y = topMargin + gate.qubit * wireSpacing;
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x - 15);
+                    rect.setAttribute('y', y - 15);
+                    rect.setAttribute('width', '30');
+                    rect.setAttribute('height', '30');
+                    // Use matching colors for H (blue) and S (purple)
+                    const fillColor = gate.type === 'H' ? '#3498db' : '#9b59b6';
+                    const strokeColor = gate.type === 'H' ? '#2980b9' : '#8e44ad';
+                    rect.setAttribute('fill', fillColor);
+                    rect.setAttribute('stroke', strokeColor);
+                    rect.setAttribute('stroke-width', '2');
+                    rect.setAttribute('rx', '4');
+                    svg.appendChild(rect);
+
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x);
+                    text.setAttribute('y', y + 5);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-size', '16');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('fill', 'white');
+                    text.textContent = gate.type;
+                    svg.appendChild(text);
+                } else if (gate.type === 'CNOT') {
+                    const controlY = topMargin + gate.control * wireSpacing;
+                    const targetY = topMargin + gate.target * wireSpacing;
+
+                    // Control dot
+                    const controlDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    controlDot.setAttribute('cx', x);
+                    controlDot.setAttribute('cy', controlY);
+                    controlDot.setAttribute('r', '5');
+                    controlDot.setAttribute('fill', '#333');
+                    svg.appendChild(controlDot);
+
+                    // Target circle with plus
+                    const targetCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    targetCircle.setAttribute('cx', x);
+                    targetCircle.setAttribute('cy', targetY);
+                    targetCircle.setAttribute('r', '12');
+                    targetCircle.setAttribute('fill', 'white');
+                    targetCircle.setAttribute('stroke', '#333');
+                    targetCircle.setAttribute('stroke-width', '2');
+                    svg.appendChild(targetCircle);
+
+                    const plusV = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    plusV.setAttribute('x1', x);
+                    plusV.setAttribute('y1', targetY - 12);
+                    plusV.setAttribute('x2', x);
+                    plusV.setAttribute('y2', targetY + 12);
+                    plusV.setAttribute('stroke', '#333');
+                    plusV.setAttribute('stroke-width', '2');
+                    svg.appendChild(plusV);
+
+                    const plusH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    plusH.setAttribute('x1', x - 12);
+                    plusH.setAttribute('y1', targetY);
+                    plusH.setAttribute('x2', x + 12);
+                    plusH.setAttribute('y2', targetY);
+                    plusH.setAttribute('stroke', '#333');
+                    plusH.setAttribute('stroke-width', '2');
+                    svg.appendChild(plusH);
+
+                    // Connecting line
+                    const connector = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    connector.setAttribute('x1', x);
+                    connector.setAttribute('y1', Math.min(controlY, targetY));
+                    connector.setAttribute('x2', x);
+                    connector.setAttribute('y2', Math.max(controlY, targetY));
+                    connector.setAttribute('stroke', '#333');
+                    connector.setAttribute('stroke-width', '2');
+                    svg.appendChild(connector);
+                }
+            });
+            
+            // Draw measurement boxes if measurement has been performed
+            if (hasMeasurement) {
+                const numGatePositions = Math.max(circuitGates.length, 1);
+                const measureX = (numGatePositions + 3 / 2) * gateSpacing;
+                
+                for (let i = 0; i < numQubits; i++) {
+                    const y = topMargin + i * wireSpacing;
+                    
+                    // Measurement box
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', measureX - 15);
+                    rect.setAttribute('y', y - 15);
+                    rect.setAttribute('width', '30');
+                    rect.setAttribute('height', '30');
+                    rect.setAttribute('fill', 'white');
+                    rect.setAttribute('stroke', '#2c3e50');
+                    rect.setAttribute('stroke-width', '2');
+                    rect.setAttribute('rx', '4');
+                    svg.appendChild(rect);
+                    
+                    // Measurement symbol (meter icon)
+                    const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    arc.setAttribute('d', `M ${measureX - 8} ${y + 5} Q ${measureX} ${y - 5} ${measureX + 8} ${y + 5}`);
+                    arc.setAttribute('fill', 'none');
+                    arc.setAttribute('stroke', '#2c3e50');
+                    arc.setAttribute('stroke-width', '1.5');
+                    svg.appendChild(arc);
+                    
+                    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    arrow.setAttribute('x1', measureX);
+                    arrow.setAttribute('y1', y + 5);
+                    arrow.setAttribute('x2', measureX + 6);
+                    arrow.setAttribute('y2', y - 3);
+                    arrow.setAttribute('stroke', '#2c3e50');
+                    arrow.setAttribute('stroke-width', '1.5');
+                    svg.appendChild(arrow);
+                    
+                    // Measurement result to the right
+                    const resultText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    resultText.setAttribute('x', measureX + 25);
+                    resultText.setAttribute('y', y + 5);
+                    resultText.setAttribute('font-size', '14');
+                    resultText.setAttribute('fill', '#e74c3c');
+                    resultText.textContent = measurementResults[i];
+                    svg.appendChild(resultText);
+                }
+            }
+        }
+
+        // Event listeners
+        document.getElementById('qubit-input').addEventListener('input', init);
+        document.getElementById('qubit-input').addEventListener('change', init);
+        document.getElementById('undo-button').addEventListener('click', undo);
+        document.getElementById('reset-button').addEventListener('click', init);
+        document.getElementById('measure-button').addEventListener('click', measureAll);
+
+        // Initialize on page load
+        init();
+    </script>
+</body>
+</html>
